@@ -14,54 +14,80 @@ const INITIAL_VIEW_STATE = {
 };
 
 var myFeatureCollection = {
-  type: 'FeatureCollection',
-  features: [
-    /* insert features here */
-  ]
+  "type": "FeatureCollection",
+  "features": [ ]
 };
 
-const selectedFeatureIndexes = [];
+const layers = [
+  new GeoJsonLayer({
+    id: 'base-map',
+    data: COUNTRIES,
+    // Styles
+    stroked: true,
+    filled: true,
+    lineWidthMinPixels: 2,
+    opacity: 0.4,
+    getLineColor: [60, 60, 60],
+    getFillColor: [200, 200, 200]
+  }),
+  new GeoJsonLayer({
+    id: 'airports',
+    data: AIR_PORTS,
+    // Styles
+    filled: true,
+    pointRadiusMinPixels: 2,
+    pointRadiusScale: 2000,
+    getRadius: f => 11 - f.properties.scalerank,
+    getFillColor: [200, 0, 80, 180],
+    // Interactive props
+    pickable: true,
+    autoHighlight: true,
+    onClick: info =>
+        // eslint-disable-next-line
+        info.object && alert(`${info.object.properties.name} (${info.object.properties.abbrev})`)
+  }),
+
+  new EditableGeoJsonLayer({
+    id: 'nebula',
+    data: myFeatureCollection,
+    selectedFeatureIndexes : [],
+    mode: 'drawPolygon',
+    onEdit: ({ updatedData, editType, featureIndexes, editContext }) => {
+
+      if (editType === 'addFeature') {
+
+        myFeatureCollection = updatedData;
+
+        layers.push(new GeoJsonLayer({
+
+          id: 'extruded',
+          data: updatedData.features,
+
+          // Styles
+          filled: true,
+          pointRadiusMinPixels: 2,
+          pointRadiusScale: 2000,
+          extruded: true,
+          getElevation: 1000000,
+          getFillColor: [200, 0, 80, 180],
+
+          // Interactive props
+          pickable: true,
+          autoHighlight: true,
+
+        }));
+
+        deck.setProps({layers : layers})
+      }
+
+    },
+  }),
+]
 
 export const deck = new Deck({
   initialViewState: INITIAL_VIEW_STATE,
   controller: true,
-  layers: [
-    new GeoJsonLayer({
-      id: 'base-map',
-      data: COUNTRIES,
-      // Styles
-      stroked: true,
-      filled: true,
-      lineWidthMinPixels: 2,
-      opacity: 0.4,
-      getLineColor: [60, 60, 60],
-      getFillColor: [200, 200, 200]
-    }),
-    new GeoJsonLayer({
-      id: 'airports',
-      data: AIR_PORTS,
-      // Styles
-      filled: true,
-      pointRadiusMinPixels: 2,
-      pointRadiusScale: 2000,
-      getRadius: f => 11 - f.properties.scalerank,
-      getFillColor: [200, 0, 80, 180],
-      // Interactive props
-      pickable: true,
-      autoHighlight: true,
-      onClick: info =>
-        // eslint-disable-next-line
-        info.object && alert(`${info.object.properties.name} (${info.object.properties.abbrev})`)
-    }),
-
-    new EditableGeoJsonLayer({
-      id: 'nebula',
-      data: myFeatureCollection,
-      mode: DrawPolygonMode,
-      selectedFeatureIndexes,
-      onEdit: ({ updatedData }) => {console.log(updatedData);}
-    })
-  ]
+  layers: layers
 });
 
 // For automated test cases
